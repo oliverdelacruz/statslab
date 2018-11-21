@@ -1,0 +1,190 @@
+---
+title: "how to knitr"
+author: "me"
+output: pdf_document
+---
+```{r setup, include = FALSE}
+# set global chunk options: all images will be 7x5 inches
+library(knitr)
+opts_chunk$set(fig.width = 7, fig.height = 5)
+opts_chunk$set(tidy.opts = list(width = 70,width.cutoff = 70), tidy = TRUE)
+options(digits = 4)
+# set seed
+set.seed(123)
+```
+
+<!-- Kommentare sind moeglich mit HTML Kommentaren
+<!-- Based on knitr-minimal.Rmd on http://yihui.name/knitr/demo/minimal/ -->
+
+# Abstract
+
+# Introduction
+
+This is a minimal example of using **knitr** to produce a _PDF_ file from _Markdown_. The original version can be found at the knitr [Website](http://yihui.name/knitr/demo/minimal/).
+
+# Related work
+
+# Dataset
+
+# Exploratory analysis
+
+
+
+Add libraries
+```{r libraries}
+# import libraries
+library(psych)
+library(corrplot)
+library(moments)
+```
+Now we write some code chunks directly in this markdown file.
+```{r load}
+# Clean console output and environment
+rm(list=ls())
+cat("\014") 
+# Set local path
+path_data <- "C:\\ETH\\StatsLab\\data\\"
+# Load files
+master_data <- readRDS(paste(path_data,"mastertable.rds",sep=""))
+log_data <-  readRDS(paste(path_data,"logDataAnonym.rds",sep=""))
+course_data <-  readRDS(paste(path_data,"quizList.rds",sep=""))
+exam_data <-  readRDS(paste(path_data,"exam.rds",sep=""))
+```
+
+```{r exploratory analysis - 1part}
+# Formatting data - log data
+col_log <- c( "idVollstName", "idBetroffNutzer","Zeit", "Ereigniskontext", "Komponente" ,"Ereignisname", "Beschreibung")
+log_data <- log_data[,col_log] 
+log_data$Zeit <- as.POSIXct(log_data$Zeit, format = "%d.%m.%Y %H:%M", tz = "")
+
+# Select ids that have grades
+id_students <- unique(c(master_data$id))
+log_data <- log_data[log_data$idVollstName %in% id_students ,]
+
+# Difference of students interacted with moodle and those who not
+NROW(id_students) - NROW(unique(log_data$idVollstName))
+
+# Remove students who did not interact with moodle and went to the exam
+id_students_not_participated <- c(setdiff(id_students,log_data$idVollstName))
+exam_data <- exam_data[!(exam_data$id %in% id_students_not_participated),]
+master_data <- master_data[!(master_data$id %in% id_students_not_participated),]
+
+# Plot data - participation per quiz
+table_quiz <- table(master_data$quiz_nr)
+plot(table_quiz, ylab ="Frequency", xlab="Quiz", col = "blue", main = "Participation per quiz")
+
+# Plot data - grade distribution
+hist(exam_data$Grade, breaks = 10, main = "Distribution of Grades", xlab= "Grades", col = "blue")
+
+# Table summary of grades
+grades_dist <- cbind(mean(exam_data$Grade),sd(exam_data$Grade),
+                     skewness(exam_data$Grade), kurtosis(exam_data$Grade))
+points_dist <- cbind(mean(exam_data$Total),sd(exam_data$Total),
+                     skewness(exam_data$Total), kurtosis(exam_data$Total))
+distr <- rbind(grades_dist,points_dist)
+colnames(distr) <- c("Mean", "Std. deviation", "Skewness", "Kurtosis")
+rownames(distr) <- c("Grades","Points")
+knitr::kable(distr, align = 'c')
+```
+
+```{r exploratory analysis - 2part}
+# prepare data and remove ids from students and courses
+log_data$Beschreibung <- gsub('[[:digit:]]+|The user with id+|id.*|with.*
+                              |[[:punct:]]|^\\s+|\\s+$|\n|\\n', "" 
+                              , log_data$Beschreibung)
+table_analysis <-  as.data.frame(table(log_data$idVollstName,log_data$Komponente,log_data$Beschreibung))
+grades <- as.matrix(exam_data[order(exam_data$id), c("Total")])
+
+# Check length of the matrices
+nid <-  NROW(unique(table_analysis$Var1))
+ncomp <- NROW(unique(table_analysis$Var2))
+nstatus <-  NROW(unique(table_analysis$Var3))
+
+# Determine correlations and format row names
+comp_names <- paste0( gsub('OU+|\\s+|\\s+$',"",
+                           rep(as.character(
+                             unique(table_analysis$Var2)))),
+" - ", rep(as.character(unique(table_analysis$Var3)),each = ncomp))
+count_test <-  matrix(c(table_analysis$Freq),nrow= nid, ncol= ncomp*nstatus)
+colnames(count_test) <- comp_names
+count_select <- count_test[, colSums(count_test)> 5]
+
+#Perform t-test for the correlation
+NROW(count_select)
+NROW(grades)
+test_holm <- corr.test(count_select,grades,adjust="holm")
+
+# Draw table with t-tests
+corr_log <- as.data.frame(test_holm$r)
+corr_test_log  <- as.data.frame(test_holm$p)
+order_asc_log <- order(corr_log, decreasing = TRUE)
+names_log <- row.names(corr_log)[order_asc_log]
+corr_log_matrix <- cor(count_select[,order_asc_log])
+corr_test_log <- round(corr_test_log[order_asc_log,],digits = 4)
+corr_log <- round(corr_log[order_asc_log,], digits = 4)
+colnames(corr_log_matrix) <- seq(NCOL(corr_log_matrix))
+summary_corr <- as.data.frame(cbind(names_log,colnames(corr_log_matrix),corr_log,corr_test_log))
+colnames(summary_corr) <- c("Description","Index","Coefficient","p-value")
+knitr::kable(summary_corr, align = c('l'))
+
+# Plot correlations
+colnames(corr_log_matrix) <- seq(NCOL(corr_log_matrix))
+rownames(corr_log_matrix) <- seq(NCOL(corr_log_matrix))
+corrplot(corr_log_matrix)
+```
+We can also produce plots. The corresponding outputs are automatically inserted in our output document. We use the built-in dataset `cars`. 
+
+```{r myplot, fig.cap = "\\label{mylabel}Your nice caption here."}
+par(mar = c(4, 4, .1, .1))
+with(mtcars, {
+  plot(mpg ~ hp, pch = 20, cex = 2, col = 'darkgray')
+  lines(lowess(hp, mpg))
+})
+x <- 2
+```
+
+In Figure \ref{mylabel} we can observe that ...
+
+### Inline Code
+
+So called **inline R code** is also supported, e.g. the value of `x` is `r x` and today is `r date()`. What about a rounded random number, like `r round(rnorm(1), 2)`? Wait, why doesn't it change?
+
+## Math
+
+LaTeX math can be used as usual: $f(\alpha, \beta) \propto x^{\alpha-1}(1-x)^{\beta-1}$. We can also write $$2^2 + y^2 = 1.$$
+
+## Misc
+
+### Indenting
+You can indent code chunks so they can nest within other environments such as lists.
+
+1. the area of a circle with radius x
+    ```{r foo}
+    2^2 * pi
+    ```
+2. OK, that is great!
+
+### Tables
+We can also produce pretty tables of data frames
+```{r table}
+knitr::kable(swiss[1:10,], caption = "The first 10 rows of the `swiss` dataset.")
+```
+
+Alternatively, we can build a table ourselves manually (here with centered columns).
+
+ETH Zurich   | ETH Lausanne
+:----------: | :-----------:
+`r rnorm(3)`      | Cell 2
+Cell 3       | Cell 4
+
+# Results
+
+# Conclusion
+
+# Recommendations
+
+# Acknowledgments
+
+
+## Conclusions
+Markdown is super easy to write. Go to **knitr** [homepage](http://yihui.name/knitr) for more details.
