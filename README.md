@@ -23,7 +23,7 @@ that migth drop the online course or assist them to improve their comprehension 
 All the sripts are run in R using R Studio. Unfortunately, data is confidential and it cannot be shared on the internet. 
 
 ## License
-****
+
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
