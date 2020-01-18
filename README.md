@@ -6,7 +6,7 @@ This course focuses on applying on statistical theory on real data and gaining i
 
 The Department of Statistics from ETH has provided us with different dataset that gathers information student participation, 
 grades on assigments, results on the quizzes, logs in the online course, etc. Our objective is to predict to the outcome
- or final grade of the student. Moreover, the conclusions derived from this study, we will be used to target potential students 
+or final grade of the student. Moreover, the conclusions derived from this study, we will be used to target potential students 
 that migth drop the online course or assist them to improve their comprehension on material to finally obtain better marks.
 
 ## Content
