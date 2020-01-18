@@ -20,7 +20,7 @@ that migth drop the online course or assist them to improve their comprehension 
 
 ## Prerequisites
 
-All the sripts are run in R using R Studio.
+All the sripts are run in R using R Studio. Unfortunately, data is confidential and it cannot be shared on the internet. 
 
 ## License
 ****
